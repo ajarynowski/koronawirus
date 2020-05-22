@@ -1,0 +1,193 @@
+---
+title: "Could Ramadan catalize or inhibite SARS-CoV-2 spread?"
+author: "Andrzej Jarynowski"
+date: "19/05/2020"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
+
+```
+## Abstract
+Around 1.8 billion Muslims worldwide will celebrate in some extent the holy month of Ramadan during COVID-19. Many Muslims increase their attendance at worships and traditional dining, so infectious contact rates could increase. Moreover, fasting could increase probability of inquiring infection. There are mitigation measures applied to reduce of SARS-CoV-2 spread, however their real impact is still unknown. 
+We have correlate infection dynamics with Muslim population in 150 countries. We found statistically significant positive link with proportion of Islam adherence with increase in normalized new case and incidence of COVID-19
+
+
+
+## Problem Introduction
+The COVID-19 case registry and proportion of Muslim population give an opportunity to compare possible role of the holy Ramadan in disease propagation.
+Religious norms are rules that prescribe what people should and should not do in a social environment. While the traditions associated as fasting and gathering in worship sites with Ramadan this month (23.04-23.05.2020 CEST) are well established, they could affect SARS-CoV-2 spread. People are instructed by authorities (WhO, 2020) by advising on physical distancing; encouraging healthy hygiene; frequently cleaning worship sites, etc.
+
+But how will adherence to healthy instructions or religious norms affect the pandemic shape? Disregarding medical differences, we are trying to consider the relative religious differences to predict relative penetration of COVID-19 pandemic internationally during 1-18 May 2020. 
+
+
+
+
+#State of the art and Working hypothesis
+
+
+There are plenty of attepts (Khan & Lehebi, 2020; Yaqub, et al., 2020) to link fasting (issues as dehydration, lower physical activity levels, sleeping rescheduling, an inability to take medications) with immunity deficency and higher risk of being infected with COVID-19 or developing severe illnesses.
+Traditionally sharing iftar meals with a geater amounts of people and praying together in a worship site could increase infectious contacts.
+
+However, up to our knowledge, there is no study showing quantitative link between Ramadan and spread of SARS-CoV-2.
+
+
+
+
+
+
+We analyze proportion of Muslims and time series of daily incidence per million and cases numbers for 197 countries and territories.
+
+Our working hypothesis is that Muslims undergo various lifestyle changes during Ramadan, which could or not lead to:
+- increase of infectious contact rates (sharing meals and praying together in worship sites);
+- increase of infection probability per contact (immunodeficiency due to fasting).
+
+We decided to start our observation since 1st of Mai due to disease incubation period and the last day is 18.05.2020.
+
+This is important to mention, that compliance with authorities measures (e.g. Healthy Ramadan by WHO) could the same time decrease infectious contact rate (by physical distancing) or decease probability of infection per contact (by healthy hygiene and cleaning worship sites).
+
+##Measurable variables and data curing
+
+We define:
+% of Islam - proportion of Muslims in the country (Pew 2014)
+regression in cases - linear regression coefficient between daily case series and consequential days of Mai for each country. It tells as what are the trends in total number of cases.
+
+regression in incidence - linear regression coefficient between daily incidence per million inhibitants series and consequetive days of Mai for each country. It tells as what are the trends in indcidence.
+
+
+regression in cases normalized - linear regression coefficient between daily case series and consecutive days of Mai divided by mean daily number of cases in Mai for each country. It tells as what are the trends in  number of cases, with 1 to be the mean number of cases.
+
+We include for analysis these countries, which reported new infection cases for each day in respective time period (Mai - 98 countries) and April (147 countries)
+
+
+
+```{r 2, echo=FALSE, include=TRUE}
+load("Ramadan.RData")
+load("Ramadan_apr.RData")
+kra2$regres_incidence_may=kra2$regres_incidence_mai
+kra2$regres_cases_may=kra2$regres_cases_mai
+kra2$regres_cases_norm_may=kra2$regres_cases_norm_mai
+
+
+
+```
+
+## Results
+
+We can see relationship in a linear regressions between regression in incidence/normalized cases and % Islam.
+
+
+```{r indidence1}
+
+kra2=kra2[which(kra2$Islam>1),]
+pl <- ggplot(kra2, aes(Islam, regres_incidence_may, color=regres_cases_may)) + theme_bw()+
+  geom_point() + xlab("% of Muslims") +geom_text(aes(label=geoId),hjust=0, vjust=0, color="red", size=3) +
+  geom_smooth(method = "lm")
+pl
+
+
+
+```
+Scatter plot between of regression in incidence and % of Islam.
+
+```{r indidence2}
+inc_mai=lm(regres_incidence_mai~Islam, data=kra2)
+summary(inc_mai)
+
+```
+There is an insignificant relationship between incidence and % of Islam.
+
+
+
+```{r cases1}
+
+
+pl <- ggplot(kra2, aes(Islam, regres_cases_norm_may,size=regres_incidence_may, color=regres_cases_may)) + theme_bw()+
+  geom_point() + xlab("% of Muslims") +geom_text(aes(label=geoId),hjust=0, vjust=0, color="red", size=3) +
+  geom_smooth(method = "lm")
+pl
+
+
+
+```
+Scatter plot between of regression in cases normalized  and % of Islam.
+
+
+
+```{r cases2}
+cases_mai=lm(regres_cases_norm_mai~Islam, data=kra2)
+summary(cases_mai)
+```
+There is an significant relationship between regression of cases and % of Islam.
+
+As a control, let compare regressions in April - where we do not see any ralationship between infection dynamics and proportion of Muslims. 
+
+```{r april}
+#
+pl <- ggplot(kra_apr, aes(Islam, regres_incidence_apr,size=regres_cases_norm_apr, color=regres_cases_apr)) + theme_bw()+
+  geom_point() + xlab("% of Muslims") +geom_text(aes(label=geoId),hjust=0, vjust=0, color="red", size=3) +
+  geom_smooth(method = "lm")
+pl
+
+```
+
+
+```{r april 2}
+#
+april=lm(regres_incidence_apr~Islam, data=kra_apr)
+summary(april)
+```
+
+
+
+
+```{r comparision}
+#
+mod=tab_model(cases_mai,inc_mai,april)
+mod
+
+kr=inner_join(kra2, kra_apr, c("geoId"="geoId"))
+kr2=kr[kr$Islam.x>10,]
+t.test(kr2$regres_incidence_may,kr2$regres_incidence_apr, alternative = "greater")
+
+pl <- ggplot(kr2, aes(regres_incidence_apr, regres_incidence_may,size=regres_cases_norm_apr, color=regres_cases_norm_apr)) + theme_bw()+
+  geom_point() + xlab("Incidence in April (control)") +geom_text(aes(label=geoId),hjust=0, vjust=0, color="red", size=3) +
+  geom_smooth(method = "lm")
+pl
+
+```
+
+
+## Conclusions
+
+We showed that there is statistically significant positive relationship between proportion of Muslims and increase of COVID-19 cases and incidence in May 2020.
+
+Ramadan is more or less celebrated this pandemic year by 1.8 billion Islam adherents, making up about 24% world population. The results emphasize the need to pay more attention into Ramadan context when compering outbreak dynamics between countries. 
+
+However, there are plenty limitations of this illustrative study.During Ramadan this year, some counties closed mosques (Norway) some not (Germany). There are also various adherence level to Ramadan rules within Muslims worldwide e.g. 20% in Morocco and 95% in UEA (Statista 2020). Moreover, compliance to hygienic and physical distancing measures differ significantly between countries (EU 2020).
+
+Concluding for a short-term impact of Ramadan during pandemic (beyond the first 18 days of Ramadan) a complete picture will be available probably 2 week after the Ramadan finished with additional control in policy variations, medical system, climate, arrival time, etc in different countries too. 
+
+
+## Literature
+
+ECDC (2020) COVID-2019 Data https://opendata.ecdc.europa.eu/covid19/casedistribution/csv
+EU (2020) The Health System Response Monitor (HSRM)  https://www.covid19healthsystem.org/mainpage.aspx 
+Khan, M. H., & Al-Lehebi, R. (2020). Respiratory disease and Ramadan. The Lancet Respiratory Medicine, 8(5), 449-450.
+Pew Research Center (2015) Religious Composition by Country https://www.pewforum.org/2015/04/02/religious-projection-table/2010/percent/all
+Statista 2020 https://www.statista.com/topics/3796/ramadan-2017/ 
+WHO (2020) Safe Ramadan practices in the context of the COVID-19 https://apps.who.int/iris/bitstream/handle/10665/331767/WHO-2019-nCoV-Ramadan-2020.1-eng.pdf 
+Yaqub, S., Rana, M. U., & Aukrust, P. (2020). Ramadan during the COVID-19 pandemic. Tidsskrift for Den norske legeforening.
+
+
+
+
