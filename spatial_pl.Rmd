@@ -1,0 +1,406 @@
+---
+title: "spatial_pl"
+author: "AJ"
+date: "29/09/2020"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
+library(pheatmap)
+library(plotly)
+library(caret)
+library(car)
+library(leaps)
+library(MASS)
+
+# PKW  https://pe2019.pkw.gov.pl/pe2019/pl/dane_w_arkuszach.
+# GUS https://bdl.stat.gov.pl/BDL/start.
+# GUS Poznan https://poznan.stat.gov.pl.
+# Arkusz Rogalskiego https://docs.google.com/spreadsheets/d/1Tv6jKMUYdK6ws6SxxAsHVxZbglZfisC8x_HZ1jacmBM
+# 
+#load("../input/spatial-covid-poland/Przestrzenne.RData")
+#zmiana administacyjna  walbrzyski ->
+#save(all_election2,macierz, file = "spatial2.RData")
+#load("C:/Users/gulak/Downloads/Nowy folder/asf/korona/spatial.RData")
+load("spatial2.RData")
+#load("spatial.RData")
+
+komponenty=c(2,2,3,3,3,1,1,3,1,1,1,3,1,1,2,2,2,1,2,1,2,1,1,2,1,1,2,2,2)
+all_election_2=all_election2[,c(6,8,9,16,19,22,25,26,29,30,33,36:38,41:54,58)]
+all_election_2$cos.1=as.numeric(paste(all_election_2$cos.1))
+colnames(all_election_2)=c("population_size","forest_density","longitude", "PIS_support","income","postproduction_age","internal_emigration","external_emigration", "internal_immigration", "external_immigration","industry_revenue", "empl_agriculture","empl_industry", "empl_services","poulation_density", "arrival_SARS", "size_COVID", "mob_in", "mob_out", "mobility", "log_mobility","pagerank_mob", "betweenness_mob", "closeness_mob", "senior_fraction","industry_fraction", "neighbors_size","neighbors_arr","PM")
+
+#bledy
+#bledy=c(164,140,158,176,179,228,224,230,175)
+bledy2=c(140,158,162,175,176,178,179,224,228,230)
+#kielce
+registered_cases=all_election_2$size_COVID[102]
+all_election_2$arrival_SARS[140]=all_election_2$arrival_SARS[102]
+all_election_2$size_COVID[102]=registered_cases*all_election_2$population_size[102]/(all_election_2$population_size[102]+all_election_2$population_size[140])
+all_election_2$size_COVID[140]=registered_cases*all_election_2$population_size[140]/(all_election_2$population_size[102]+all_election_2$population_size[140])
+
+#koszalin
+registered_cases=all_election_2$size_COVID[112]
+all_election_2$arrival_SARS[158]=all_election_2$arrival_SARS[112]
+all_election_2$size_COVID[112]=registered_cases*all_election_2$population_size[112]/(all_election_2$population_size[112]+all_election_2$population_size[158])
+all_election_2$size_COVID[158]=registered_cases*all_election_2$population_size[158]/(all_election_2$population_size[112]+all_election_2$population_size[158])
+
+#jelenio
+registered_cases=all_election_2$size_COVID[92]
+all_election_2$arrival_SARS[162]=all_election_2$arrival_SARS[92]
+all_election_2$size_COVID[92]=registered_cases*all_election_2$population_size[92]/(all_election_2$population_size[92]+all_election_2$population_size[162])
+all_election_2$size_COVID[162]=registered_cases*all_election_2$population_size[162]/(all_election_2$population_size[92]+all_election_2$population_size[162])
+
+#opole
+all_election_2$arrival_SARS[175]=all_election_2$arrival_SARS[332]
+all_election_2$size_COVID[175]=1
+
+#ostoleka
+all_election_2$arrival_SARS[176]=all_election_2$arrival_SARS[334]
+all_election_2$size_COVID[176]=6
+
+#piotrkowski
+registered_cases=all_election_2$size_COVID[348]
+all_election_2$arrival_SARS[178]=all_election_2$arrival_SARS[348]
+all_election_2$size_COVID[178]=registered_cases*all_election_2$population_size[178]/(all_election_2$population_size[178]+all_election_2$population_size[348])
+all_election_2$size_COVID[348]=registered_cases*all_election_2$population_size[348]/(all_election_2$population_size[178]+all_election_2$population_size[348])
+
+#plocki
+registered_cases=all_election_2$size_COVID[351]
+all_election_2$arrival_SARS[179]=all_election_2$arrival_SARS[351]
+all_election_2$size_COVID[179]=registered_cases*all_election_2$population_size[179]/(all_election_2$population_size[179]+all_election_2$population_size[351])
+all_election_2$size_COVID[351]=registered_cases*all_election_2$population_size[351]/(all_election_2$population_size[179]+all_election_2$population_size[351])
+
+#radom
+registered_cases=all_election_2$size_COVID[239]
+all_election_2$arrival_SARS[224]=all_election_2$arrival_SARS[239]
+all_election_2$size_COVID[224]=registered_cases*all_election_2$population_size[224]/(all_election_2$population_size[224]+all_election_2$population_size[239])
+all_election_2$size_COVID[239]=registered_cases*all_election_2$population_size[239]/(all_election_2$population_size[224]+all_election_2$population_size[239])
+
+#siedlce
+registered_cases=all_election_2$size_COVID[254]
+all_election_2$arrival_SARS[228]=all_election_2$arrival_SARS[254]
+all_election_2$size_COVID[228]=registered_cases*all_election_2$population_size[224]/(all_election_2$population_size[228]+all_election_2$population_size[254])
+all_election_2$size_COVID[254]=registered_cases*all_election_2$population_size[254]/(all_election_2$population_size[228]+all_election_2$population_size[254])
+#skierniewice
+registered_cases=all_election_2$size_COVID[259]
+all_election_2$arrival_SARS[230]=all_election_2$arrival_SARS[259]
+all_election_2$size_COVID[230]=registered_cases*all_election_2$population_size[230]/(all_election_2$population_size[230]+all_election_2$population_size[259])
+all_election_2$size_COVID[254]=registered_cases*all_election_2$population_size[259]/(all_election_2$population_size[230]+all_election_2$population_size[259])
+
+#all_election_2=all_election_2[,-30]
+
+all_election_bezbledow=all_election_2[-bledy2,]
+
+
+
+#write.csv2(all_election2, file="bledy.csv")
+
+
+
+```
+
+
+Correlation matrix
+```{r }
+ann_colors=list(c("red", "green","blue")[komponenty])
+ann=ann_colors[[1]]
+kor=cor(all_election_2, use="pairwise.complete.obs")
+pheatmap(kor, display_numbers = T, annotation_colors = ann)
+```
+
+
+PCA
+
+```{r }
+
+pca <- prcomp(all_election_bezbledow, center = TRUE, scale. = TRUE)
+varimax4 <- varimax(pca$rotation[,1:3])
+varimax4$loadings
+all_pca=summary(pca)
+all_pca
+```
+
+
+Full reggression model
+
+```{r }
+
+#spa vs no
+arr=all_election_2[,-c(20)]
+arr2=all_election_bezbledow[,-c(20,25,27,28,17)]
+arr2_=all_election_2[,-c(20,25,27,28,17)]
+
+#spatial
+#arr$neighbors_arr=all_election$neighbors_arr
+
+size=all_election_2[,-c(20)]
+size2=all_election_bezbledow[,-c(20,25,27,28,16)]
+size2_=all_election_2[,-c(20,25,27,28,16)]
+
+
+#spatial
+#size$PM=as.numeric(paste(size$PM))
+mod_size=lm(size_COVID~., data=size)
+mod_size2=lm(size_COVID~., data=size2)
+mod_size2_=lm(size_COVID~., data=size2_)
+
+af <- anova(mod_size)
+afss <- af$"Sum Sq"
+anova(mod_size)
+proc<-cbind(af,PctExp=afss/sum(afss)*100)
+et=colnames(size)[-17]
+#et=colnames(size)[-16]
+#et[24]="Residuals"
+proc=proc[-28,]
+#proc=proc[-24,]
+komponenty1=komponenty[-c(17,20)]
+
+pdf("size_full_.pdf")
+plot(proc$PctExp, xaxt = "n", main="%explained variance: No. cases (full  model)", xlab="", ylab = "%",col = c("red", "green","blue")[komponenty1], pch = c(16, 17, 18)[komponenty1])
+axis(1, at=1:27, labels=FALSE)
+text(seq(1, 27, by=1), par("usr")[3]-0.6, par("usr")[2]+0, 0, cex=0.57, labels = et, srt = 90, pos = 2, xpd = TRUE)
+dev.off()
+
+
+mod_arr=lm(arrival_SARS~., data=arr)
+mod_arr2=lm(arrival_SARS~., data=arr2)
+mod_arr2_=lm(arrival_SARS~., data=arr2_)
+
+af <- anova(mod_arr)
+afss <- af$"Sum Sq"
+proc<-cbind(af,PctExp=afss/sum(afss)*100)
+et=colnames(arr)[-16]
+komponenty1=komponenty[-c(16,20)]
+#et[24]="Residuals"
+#krotsze
+#proc=proc[-24,]
+proc=proc[-28,]
+#plot(proc$PctExp, main="%wyjasnienia zmiennsci czasu_dojscoa w modelu liniowym")
+pdf("arr_full_.pdf")
+plot(proc$PctExp, xaxt = "n", ylim=c(0,14), main="%explained variance: arrival time (full  model)", xlab="", ylab="%",  col = c("red", "green","blue")[komponenty1], pch = c(16, 17, 18)[komponenty1])
+axis(1, at=1:27, labels=FALSE)
+text(seq(1, 27, by=1), par("usr")[3] -0.6, par("usr")[2]+0,0, cex=0.6, labels = et, srt = 90, pos = 2, xpd = TRUE)
+#legend(1,5, legend=c("a"))
+legend(1, 14, legend=c("demographic cluster", "covid-like cluster", "social cluster"), col = c("red", "green","blue"), pch = c(16, 17, 18), cex=0.8)
+dev.off()
+```
+
+
+
+
+
+```{r }
+
+
+#mod_arr=lm(arrival_SARS~., data=arr)
+#summary(mod_arr)
+step.model <- stepAIC(mod_arr, direction = "both", trace = FALSE)
+step.model2 <- stepAIC(mod_arr2, direction = "both", trace = FALSE)
+step.model2_ <- stepAIC(mod_arr2_, direction = "both", trace = FALSE)
+
+
+#mod_size=lm(size_COVID~., data=size)
+step.model_s <- stepAIC(mod_size, direction = "both", trace = FALSE)
+step.model_s2 <- stepAIC(mod_size2, direction = "both", trace = FALSE)
+step.model_s2_ <- stepAIC(mod_size2_, direction = "both", trace = FALSE)
+
+mod=tab_model(step.model, step.model_s, digits = 2)
+mod
+
+mod2=tab_model(step.model2, step.model_s2, digits = 4, show.ci = FALSE)
+mod2
+
+mod_all=tab_model(step.model,step.model2, step.model_s,step.model_s2, digits = 4, show.ci = FALSE,  show.aic=TRUE)
+mod_all
+
+
+mod_all=tab_model(step.model,step.model2, step.model_s,step.model_s2, digits = 3, show.ci = FALSE,  show.aic=TRUE)
+mod_all
+```
+
+
+
+
+```{r }
+
+p<-ggplot(all_election_2, aes(x="",y=arrival_SARS-1)) +theme_bw()+
+  ylab("days since first case on 04.03") + xlab("density of No. poviats") +
+  geom_violin(fill="green")
+p
+
+p<-ggplot(all_election_2, aes(x="",y=size_COVID)) +theme_bw()+
+  ylab("No. cases")+xlab("density of No. poviats")+ 
+  geom_violin(fill="red")
+p
+
+```
+
+moran's spatial correlations
+
+```{r }
+library(ape)
+dists.inv <- 1/macierz
+diag(dists.inv ) <- 0
+Moran.I(all_election_2$arrival_SARS, dists.inv)
+Moran.I(all_election_2$size_COVID, dists.inv)
+
+
+```
+
+
+
+```{r }
+all_election=all_election_2
+all_election$pred_arr<-mod_arr$fitted.values
+all_election$pred_size<-mod_size$fitted.values
+all_election$res_size<-mod_size$residuals
+
+#scaling to standard normal distribution
+all_election$pred_arr_s<-scale(all_election$pred_arr)
+all_election$pred_size_s<-scale(mod_size$fitted.values)
+all_election$res_size_s<-scale(mod_size$residuals)
+all_election$opt=NA
+all_election$opt_bin=0
+
+for (i in 1:380) {
+all_election$opt[i]=as.numeric(all_election$res_size_s[i])+as.numeric(all_election$pred_size_s[i])-as.numeric(all_election$pred_arr_s[i])
+}
+
+wybrane=which(all_election$opt>0)
+sum_all=sum(all_election$opt[wybrane])
+all_election$allocation=NA
+for (i in wybrane){
+  all_election$allocation[i]=ceiling(all_election$opt[i]*1000/sum_all)
+  all_election$opt_bin[i]=1
+}
+
+all_election2$allocation=all_election$allocation
+
+
+
+```
+
+
+
+```{r }
+library(rgdal)
+require(rgeos) 
+poland_powiaty_eqa <- readOGR(dsn="C://Users/gulak/Downloads/Nowy folder/asf/ComputationalEpidemiologyASF-master/ProjektML_HEX/Maps", "powiaty")
+
+poland_powiaty <- readOGR(dsn="C://Users/gulak/Downloads/Nowy folder/asf/ComputationalEpidemiologyASF-master/ProjektML_HEX/Maps", "powiaty")
+poland_powiaty <- spTransform(poland_powiaty,
+                              CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"))
+
+
+poland_powiaty <- gSimplify(poland_powiaty,  tol = 5000, topologyPreserve = TRUE)
+poland_powiaty_eqa@data$id=c(0:379)
+
+data1 = fortify(poland_powiaty) %>% left_join(.,poland_powiaty_eqa@data %>% mutate(id = as.character(id)), by = "id" )
+#data1$jpt_kod_je2=as.character(paste(data1$jpt_kod_je))
+
+for (i in 1:380){
+  if (all_election2$ter_map[i]<1000)
+  {all_election2$ter_0[i]=paste("0",as.character(all_election2$ter_map[i]), colapse="", sep="")} else
+  {all_election2$ter_0[i]=as.character(all_election2$ter_map[i])}
+}
+all_election2$jpt_kod_je=as.factor(all_election2$ter_0)
+
+
+#all_election2$jpt_kod_je=as.character(paste(all_election2$c4))
+dane= inner_join(all_election2, data1, by = c("jpt_kod_je"= "jpt_kod_je"))
+
+
+#dag=simplify(dane)
+pdf("alokacja_.pdf")
+ ggplot() +
+  theme_bw()+
+  geom_polygon(data = dane, 
+               aes(long, lat, group = group, fill = allocation),
+               #fill = "grey50", 
+               #alpha = 0,lwd=0.1,
+               colour = "white") +
+  # scale_color_manual(values = mycolors) +
+  scale_color_distiller("alocation", palette = "Spectral")+
+  ggtitle("Best allocaton of new 1000 Disease Intervention Specialists")
+dev.off()
+
+```
+
+
+diagnostics
+```{r }
+
+
+
+pdf("mod_arr_cos2_.pdf")
+par(mfrow = c(2,2))
+par(ask=F)
+plot(step.model2_, bty='l', cex.main = 1, cex.lab=1.5, cex.axis=2, cex = 1)
+dev.off()
+
+pdf("mod_size_cos2_).pdf")
+par(mfrow = c(2,2))
+par(ask=F)
+plot(step.model_s2_, bty='l', cex.main = 1, cex.lab=1.5, cex.axis=2, cex = 1)
+dev.off()
+
+ncvTest(step.model_s)
+
+# Q-Q plot
+ggplot(step.model_s2_, aes(.fitted, .resid)) +
+  geom_hline(yintercept = 0) +
+  geom_point() +
+  geom_smooth(se = FALSE)
+ggplot(step.model_s2_, aes(sample = .stdresid)) + stat_qq() + theme(text = element_text(size = 20)) + geom_abline() 
+#Shapiro-Wilk's test: p < 0.05 indicates non-normality:
+shapiro.test(resid(step.model_s2_))
+
+# collinearity
+#row.names(arr)=all_election2$id.y
+.rowNamesDF(arr2_, make.names=TRUE) <- all_election2$id.y
+.rowNamesDF(size2_, make.names=TRUE) <- all_election2$id.y
+
+vif(mod_arr2_)
+vif(mod_size2_)
+sqrt(vif(step.model_s2_)) > 2
+
+# outlier test
+outlierTest(step.model_s2_)
+
+pdf("influence_arr_.pdf")
+influencePlot(step.model2_, id.method="identify", main="Influence Plot for arrival time",
+              sub="Circle size is proportional to Cook's distance")
+dev.off()
+pdf("influence_size2.pdf")
+influencePlot(step.model_s2_, id.method="identify", main="Influence Plot for No. cases",
+              sub="Circle size is proportional to Cook's distance")
+dev.off()
+
+
+
+```
+
+
+
+
+
+
+```{r }
+
+
+
+fig <- plot_ly(all_election, x = ~pred_arr, y = ~res_size, z = ~pred_size, color = ~opt_bin, colors = c('#BF382A', '#0C4B8E'))
+fig <- fig %>% add_markers()
+fig <- fig %>% layout(scene = list(xaxis = list(title = 'Predicted arriva time'),
+                                   yaxis = list(title = 'Residuals No. cases'),
+                                   zaxis = list(title = 'Predicted No. cases')))
+
+fig
+```
